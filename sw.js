@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sugar-glider-calc-v1';
+const CACHE_NAME = 'sugar-glider-calc-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -25,22 +25,19 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Cache-first：先讀快取，快取沒有再走網路，網路成功則更新快取
+// 網路優先：先嘗試連網路拿最新版本，成功就更新快取；離線或連線失敗才退回快取
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type === 'basic') {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
